@@ -1,2 +1,6 @@
 seaborn
+pyshp
+geopandas
+rasterio
+
 ipykernel
