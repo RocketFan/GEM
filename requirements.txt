@@ -2,5 +2,7 @@ seaborn
 pyshp
 geopandas
 rasterio
+scikit-image==0.21.0
 
+memory_profiler
 ipykernel

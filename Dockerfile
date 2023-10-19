@@ -14,7 +14,6 @@ RUN apt-get update && \
 
 # Install any python packages you need
 COPY requirements.txt requirements.txt
-# VOLUME . /GEM
 
 RUN python3 -m pip install -r requirements.txt
 

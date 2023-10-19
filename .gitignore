@@ -1,6 +1,7 @@
 data
 files
 build
+logs
 
 __pycache__
 *.egg-info

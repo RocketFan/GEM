@@ -1,6 +1,6 @@
 Run in docker container
 ```
-docker run -it -v $(pwd):/GEM --gpus all --name gem gem bash
+docker run -it -v $(pwd):/GEM --gpus all --ipc host --name gem gem bash
 ```
 
 ### Reference
