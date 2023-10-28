@@ -10,7 +10,18 @@ RUN apt-get update && \
         python3-pip \
         python3-dev \
         python3-opencv \
-        libglib2.0-0
+        libglib2.0-0 \
+        wget
+
+SHELL ["/bin/bash", "-i", "-c"]
+# Install miniconda
+RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
+    bash ./Miniconda3-latest-Linux-x86_64.sh -b && \
+    rm Miniconda3-latest-Linux-x86_64.sh
+
+RUN ~/miniconda3/bin/conda init
+# RUN conda create -n gem python=3.9
+RUN conda install python=3.9
 
 # Install any python packages you need
 COPY requirements.txt requirements.txt
@@ -27,4 +38,4 @@ RUN pip3 install torch==2.0.1 torchvision
 WORKDIR /GEM
 
 # Set the entrypoint
-# ENTRYPOINT [ "python3" ]
+# ENTRYPOINT [ "conda activate gem" ]
