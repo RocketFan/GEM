@@ -1,8 +1,9 @@
 data
 files
 build
-logs
+runs
 
 __pycache__
 *.egg-info
 .vscode
+.idea
