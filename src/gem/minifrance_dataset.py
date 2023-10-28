@@ -35,12 +35,14 @@ class MiniFranceDataset(Dataset):
         landcover_map = io.imread(landcover_map_path, plugin="pil")
         landcover_map = self.transform_image(landcover_map)
 
+        geodata = minifrance_row.drop('geometry').to_dict()
+
         if self.transform:
             image = self.transform(image)
             dem = self.transform(dem)
             landcover_map = self.transform(landcover_map)
 
-        return {"image": image, "dem": dem, "landcover_map": landcover_map}
+        return {"image": image, "dem": dem, "landcover_map": landcover_map, "geodata": geodata }
 
     def __len__(self):
         return len(self.minifrance_geo)

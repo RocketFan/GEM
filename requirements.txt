@@ -3,6 +3,8 @@ pyshp
 geopandas
 rasterio
 scikit-image==0.21.0
+scikit-learn
 
+tensorboard
 memory_profiler
 ipykernel
