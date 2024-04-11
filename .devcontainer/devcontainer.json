@@ -1,0 +1,28 @@
+{
+    "name": "gem",
+    "image": "gem",
+    "runArgs": [
+        "--gpus=all"
+    ],
+    "containerEnv": {
+        "NVIDIA_VISIBLE_DEVICES": "all",
+        "NVIDIA_DRIVER_CAPABILITIES": "all"
+    },
+    "workspaceMount": "source=${localWorkspaceFolder},target=/GEM,type=bind,consistency=cached", 
+    "workspaceFolder": "/GEM",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "ms-python.autopep8",
+                "ms-python.flake8",
+                "ms-vscode.cmake-tools",
+                "GitHub.copilot",
+                "natqe.reload",
+                "ms-python.pylint",
+                "ms-python.vscode-pylance",
+                "ms-toolsai.jupyter"
+            ]
+        }
+    }
+}

@@ -5,6 +5,7 @@ from skimage import io
 from torch.utils.data import Dataset
 import torchvision.transforms as transforms
 
+
 class MiniFranceDataset(Dataset):
     def __init__(self, minifrance_geo, data_type="", transform=None):
         self.minifrance_geo = self.load_data_type(minifrance_geo, data_type)
@@ -24,14 +25,17 @@ class MiniFranceDataset(Dataset):
 
         minifrance_row = self.minifrance_geo.iloc[index]
 
-        img_path = os.path.join(minifrance_row["region_dir_path"], "BDORTHO", str(minifrance_row.name) + ".tif")
+        img_path = os.path.join(minifrance_row["region_dir_path"], "BDORTHO",
+                                str(minifrance_row.name) + ".tif")
         image = io.imread(img_path, plugin="pil")
         image = self.transform_image(image)
 
-        dem_path = os.path.join(minifrance_row["region_dir_path"], "RGEALTI", str(minifrance_row.name) + "_RGEALTI" + ".tif")
+        dem_path = os.path.join(minifrance_row["region_dir_path"], "RGEALTI",
+                                str(minifrance_row.name) + "_RGEALTI" + ".tif")
         dem = io.imread(dem_path, plugin="pil")
 
-        landcover_map_path = os.path.join(minifrance_row["region_dir_path"], "UrbanAtlas", str(minifrance_row.name) + "_UA2012" + ".tif")
+        landcover_map_path = os.path.join(minifrance_row["region_dir_path"], "UrbanAtlas", 
+                                          str(minifrance_row.name) + "_UA2012" + ".tif")
         landcover_map = io.imread(landcover_map_path, plugin="pil")
         landcover_map = self.transform_image(landcover_map)
 
@@ -42,7 +46,7 @@ class MiniFranceDataset(Dataset):
             dem = self.transform(dem)
             landcover_map = self.transform(landcover_map)
 
-        return {"image": image, "dem": dem, "landcover_map": landcover_map, "geodata": geodata }
+        return {"image": image, "dem": dem, "landcover_map": landcover_map, "geodata": geodata}
 
     def __len__(self):
         return len(self.minifrance_geo)
