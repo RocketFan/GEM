@@ -1,14 +1,15 @@
 import torch
 import os
+import pandas as pd
+import torchvision.transforms as transforms
 
 from skimage import io
 from torch.utils.data import Dataset
-import torchvision.transforms as transforms
 
 
 class MiniFranceDataset(Dataset):
-    def __init__(self, minifrance_geo, data_type="", transform=None):
-        self.minifrance_geo = self.load_data_type(minifrance_geo, data_type)
+    def __init__(self, dir_path: str, type: str):
+        self.file_df = self.__create_file_dataframe(dir_path)
         self.transform_image = transforms.Compose(
             [
                 transforms.ToPILImage(),
@@ -17,42 +18,57 @@ class MiniFranceDataset(Dataset):
             ]
         )
 
-        self.transform = transform
+        print(self.file_df.head())
+        print(self.file_df['dataset_type'].unique())
 
     def __getitem__(self, index):
         if torch.is_tensor(index):
             index = index.tolist()
 
-        minifrance_row = self.minifrance_geo.iloc[index]
+        file_df_row = self.file_df.iloc[index]
 
-        img_path = os.path.join(minifrance_row["region_dir_path"], "BDORTHO",
-                                str(minifrance_row.name) + ".tif")
-        image = io.imread(img_path, plugin="pil")
+        image = io.imread(file_df_row['image_path'], plugin="pil")
         image = self.transform_image(image)
 
-        dem_path = os.path.join(minifrance_row["region_dir_path"], "RGEALTI",
-                                str(minifrance_row.name) + "_RGEALTI" + ".tif")
-        dem = io.imread(dem_path, plugin="pil")
+        dem = io.imread(file_df_row['dem_path'], plugin="pil")
 
-        landcover_map_path = os.path.join(minifrance_row["region_dir_path"], "UrbanAtlas", 
-                                          str(minifrance_row.name) + "_UA2012" + ".tif")
-        landcover_map = io.imread(landcover_map_path, plugin="pil")
+        landcover_map = io.imread(file_df_row['lc_path'], plugin="pil")
         landcover_map = self.transform_image(landcover_map)
 
-        geodata = minifrance_row.drop('geometry').to_dict()
-
-        if self.transform:
-            image = self.transform(image)
-            dem = self.transform(dem)
-            landcover_map = self.transform(landcover_map)
-
-        return {"image": image, "dem": dem, "landcover_map": landcover_map, "geodata": geodata}
+        return {"image": image, "dem": dem, "landcover_map": landcover_map,
+                "region": file_df_row['region']}
 
     def __len__(self):
-        return len(self.minifrance_geo)
+        return len(self.file_df)
 
-    def load_data_type(self, minifrance_geo, data_type: str):
-        if not data_type:
-            return minifrance_geo
-        else:
-            return minifrance_geo[minifrance_geo["data_type"] == data_type]
+    def __create_file_dataframe(self, dir_path: str):
+        file_list = []
+        for dataset_type in os.listdir(dir_path):
+            type_path = os.path.join(dir_path, dataset_type)
+            if not os.path.isdir(type_path):
+                continue
+
+            for region in os.listdir(type_path):
+                region_path = os.path.join(type_path, region)
+                if not os.path.isdir(region_path):
+                    continue
+
+                image_dir = os.path.join(region_path, 'BDORTHO')
+                for image_file in os.listdir(image_dir):
+                    if image_file.endswith('.tif'):
+                        base_filename = os.path.splitext(image_file)[0]
+                        dem_path = os.path.join(
+                            region_path, 'RGEALTI', f'{base_filename}_RGEALTI.tif')
+                        lc_path = os.path.join(
+                            region_path, 'UrbanAtlas', f'{base_filename}_UA2012.tif')
+
+                        if os.path.exists(dem_path):
+                            file_list.append({
+                                'image_path': os.path.join(image_dir, image_file),
+                                'dem_path': dem_path,
+                                'lc_path': lc_path if os.path.exists(lc_path) else None,
+                                'region': region,
+                                'dataset_type': dataset_type
+                            })
+
+        return pd.DataFrame(file_list)

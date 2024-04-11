@@ -1,3 +1,1 @@
-from .geodata_points_regions import GeodataPointsRegions
-from .minifrance_tif_data import MiniFranceTIFData
 from .minifrance_dataset import MiniFranceDataset
