@@ -2,6 +2,7 @@ data
 files
 build
 runs
+models
 
 __pycache__
 *.egg-info

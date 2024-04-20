@@ -2,44 +2,64 @@ import torch
 import os
 import pandas as pd
 import torchvision.transforms as transforms
+import time
+import rasterio
 
 from skimage import io
 from torch.utils.data import Dataset
 
 
+def is_power_of_two(n):
+    return (n != 0) and (n & (n - 1) == 0)
+
+
+def get_tile(tensor, x, y, tile_size):
+    return tensor[:, x:x + tile_size, y:y + tile_size]
+
+
 class MiniFranceDataset(Dataset):
-    def __init__(self, dir_path: str, dataset_type: str = 'all'):
+    def __init__(self, dir_path: str, img_size=2048, dataset_type: str = 'all', n_tiles=1):
+        self.n_tiles = n_tiles
+        self.tile_size = img_size // n_tiles
         self.dataset_type = dataset_type
-        self.transform_image = transforms.Compose(
-            [
-                transforms.ToPILImage(),
-                transforms.Resize((2048, 2048)),
-                transforms.PILToTensor(),
-            ]
-        )
+        self.img_size = img_size
 
         self.file_df = self.__create_file_dataframe(dir_path)
+
+    def get_tile_size(self):
+        return self.tile_size
 
     def __getitem__(self, index):
         if torch.is_tensor(index):
             index = index.tolist()
 
-        file_df_row = self.file_df.iloc[index]
+        file_index = index // (self.n_tiles**2)
+        file_df_row = self.file_df.iloc[file_index]
+
+        x = (index % self.n_tiles) * self.tile_size
+        y = ((index // self.n_tiles) % self.n_tiles) * self.tile_size
 
         image = io.imread(file_df_row['image_path'], plugin="pil")
-        image = self.transform_image(image)
+        image = rasterio.open(file_df_row['image_path']).read(out_shape=(3, self.img_size, self.img_size))
+        image = torch.from_numpy(image)
+        image = get_tile(image, x, y, self.tile_size)
 
-        dem = io.imread(file_df_row['dem_path'], plugin="pil")
-        dem = self.transform_image(dem)
+        dem = rasterio.open(file_df_row['dem_path']).read(out_shape=(1, self.img_size, self.img_size))
+        dem = torch.from_numpy(dem)
+        dem = get_tile(dem, x, y, self.tile_size)
 
-        landcover_map = io.imread(file_df_row['lc_path'], plugin="pil")
-        landcover_map = self.transform_image(landcover_map)
+        if file_df_row['lc_path']:
+            landcover_map = rasterio.open(file_df_row['lc_path']).read(out_shape=(1, self.img_size, self.img_size)) 
+            landcover_map = torch.from_numpy(landcover_map)
+        else:
+            landcover_map = torch.zeros_like(image)
+        landcover_map = get_tile(landcover_map, x, y, self.tile_size)
 
         return {"image": image, "dem": dem, "landcover_map": landcover_map,
                 "region": file_df_row['region']}
 
     def __len__(self):
-        return len(self.file_df)
+        return len(self.file_df) * (self.n_tiles ** 2)
 
     def __create_file_dataframe(self, dir_path: str):
         file_list = []
