@@ -49,7 +49,7 @@ class MiniFranceDataset(Dataset):
         dem = get_tile(dem, x, y, self.tile_size)
 
         if file_df_row['lc_path']:
-            landcover_map = rasterio.open(file_df_row['lc_path']).read(out_shape=(1, self.img_size, self.img_size)) 
+            landcover_map = rasterio.open(file_df_row['lc_path']).read(out_shape=(1, self.img_size, self.img_size))
             landcover_map = torch.from_numpy(landcover_map)
         else:
             landcover_map = torch.zeros_like(image)
