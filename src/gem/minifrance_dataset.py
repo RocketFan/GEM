@@ -1,9 +1,8 @@
 import torch
 import os
 import pandas as pd
-import torchvision.transforms as transforms
-import time
 import rasterio
+import numpy as np
 
 from skimage import io
 from torch.utils.data import Dataset
@@ -25,6 +24,7 @@ class MiniFranceDataset(Dataset):
         self.img_size = img_size
 
         self.file_df = self.__create_file_dataframe(dir_path)
+        self.__filter_unlabeled()
 
     def get_tile_size(self):
         return self.tile_size
@@ -112,3 +112,12 @@ class MiniFranceDataset(Dataset):
                 }
             else:
                 return None
+    
+    def __filter_unlabeled(self):
+        labeled_files_df = self.file_df[self.file_df['lc_path'].notna()]
+
+        for _, file_row in labeled_files_df.iterrows():
+            label = rasterio.open(file_row['lc_path']).read(out_shape=(1, 1, 30))
+            unique_labels = np.unique(label)
+            if unique_labels.all() == 0:
+                self.file_df.drop(file_row.name, inplace=True)
