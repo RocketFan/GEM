@@ -17,7 +17,8 @@ def get_tile(tensor, x, y, tile_size):
 
 
 class MiniFranceDataset(Dataset):
-    def __init__(self, dir_path: str, img_size=2048, dataset_type: str = 'all', n_tiles=1):
+    def __init__(self, dir_path: str, img_size=2048, n_class=16, dataset_type: str = 'all', n_tiles=1):
+        self.n_class = n_class
         self.n_tiles = n_tiles
         self.tile_size = img_size // n_tiles
         self.dataset_type = dataset_type
@@ -28,6 +29,20 @@ class MiniFranceDataset(Dataset):
 
     def get_tile_size(self):
         return self.tile_size
+
+    def calc_class_percentages(self):
+        class_counts = np.zeros(self.n_class)
+
+        for _, row in self.file_df.iterrows():
+            landcover_map = rasterio.open(row['lc_path']).read(out_shape=(1, self.img_size, self.img_size))
+            unique_labels, counts = np.unique(landcover_map, return_counts=True)
+
+            for label, count in zip(unique_labels, counts):
+                class_counts[label.item()] += count.item()
+
+        total_samples = len(self.file_df) * self.img_size ** 2
+
+        return class_counts / total_samples
 
     def __getitem__(self, index):
         if torch.is_tensor(index):
@@ -112,12 +127,12 @@ class MiniFranceDataset(Dataset):
                 }
             else:
                 return None
-    
+
     def __filter_unlabeled(self):
         labeled_files_df = self.file_df[self.file_df['lc_path'].notna()]
 
-        for _, file_row in labeled_files_df.iterrows():
-            label = rasterio.open(file_row['lc_path']).read(out_shape=(1, 1, 30))
+        for _, row in labeled_files_df.iterrows():
+            label = rasterio.open(row['lc_path']).read(out_shape=(1, 1, 30))
             unique_labels = np.unique(label)
             if unique_labels.all() == 0:
-                self.file_df.drop(file_row.name, inplace=True)
+                self.file_df.drop(row.name, inplace=True)
