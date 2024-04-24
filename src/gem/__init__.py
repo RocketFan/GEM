@@ -1,1 +1,1 @@
-from .minifrance_dataset import MiniFranceDataset
+from .dataset import DFC2022Dataset

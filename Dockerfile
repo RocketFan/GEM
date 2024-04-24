@@ -1,4 +1,4 @@
-FROM nvidia/cuda:11.7.1-base-ubuntu20.04
+FROM nvidia/cuda:12.1.1-base-ubuntu22.04
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
@@ -28,11 +28,11 @@ RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh &
     rm Miniconda3-latest-Linux-x86_64.sh
 
 RUN ~/miniconda3/bin/conda init
-RUN conda install python=3.9
+RUN conda install python=3.10
 
 WORKDIR /GEM
 COPY requirements.txt requirements.txt
 RUN python3 -m pip install -r requirements.txt
 RUN python3 -m pip install --upgrade pip
-RUN pip3 install torch==2.0.1 torchvision
+RUN pip3 install torch==2.2.2 torchvision
 
