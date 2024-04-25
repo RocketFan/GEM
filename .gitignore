@@ -3,6 +3,7 @@ files
 build
 runs
 models
+lightning_logs
 
 __pycache__
 *.egg-info

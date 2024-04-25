@@ -18,11 +18,11 @@
                 "ms-python.autopep8",
                 "ms-python.flake8",
                 "ms-vscode.cmake-tools",
-                // "GitHub.copilot",
                 "natqe.reload",
                 "ms-python.pylint",
                 "ms-python.vscode-pylance",
-                "ms-toolsai.jupyter"
+                "ms-toolsai.jupyter",
+                "ms-toolsai.tensorboard"
             ]
         }
     }

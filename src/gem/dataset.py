@@ -1,9 +1,11 @@
+import torch
 import rasterio
 import numpy as np
+import torchvision.transforms as T
+import concurrent.futures
 
 from collections.abc import Callable
 from torch import Tensor
-from torchvision.transforms import v2
 from torchgeo.datasets import DFC2022
 
 
@@ -23,14 +25,10 @@ class DFC2022Dataset(DFC2022):
                  n_tiles=1,
                  img_size=2000):
 
-        resize_transform = v2.Compose([
-            v2.Resize((img_size, img_size)),
-        ])
-
         if transforms is None:
-            transforms = resize_transform
+            transforms = self.resize_transform
         else:
-            transforms = v2.Compose([resize_transform, transforms])
+            transforms = T.Compose([self.resize_transform, transforms])
 
         super().__init__(root, split, transforms, checksum)
         self.n_tiles = n_tiles
@@ -39,23 +37,46 @@ class DFC2022Dataset(DFC2022):
 
         self.__filter_unlabeled()
 
+    def resize_transform(self, sample):
+        sample["image"] = T.Resize((self.img_size, self.img_size))(sample["image"])
+        if 'mask' in sample:
+            sample["mask"] = sample["mask"].unsqueeze(0)
+            sample["mask"] = T.Resize((self.img_size, self.img_size),
+                                      interpolation=T.InterpolationMode.NEAREST)(sample["mask"])
+            sample["mask"] = sample["mask"].squeeze(0)
+        return sample
+
     def get_tile_size(self):
         return self.tile_size
 
     def calc_class_percentages(self):
         class_counts = np.zeros(len(self.classes))
 
-        for file in self.files:
+        def count_labels(file):
             mask = rasterio.open(file['target']).read()
-
             unique_labels, counts = np.unique(mask, return_counts=True)
+            return unique_labels, counts
 
+        class_counts = np.zeros(len(self.classes))
+
+        with concurrent.futures.ThreadPoolExecutor() as executor:
+            results = executor.map(count_labels, self.files)
+
+        for unique_labels, counts in results:
             for label, count in zip(unique_labels, counts):
                 class_counts[label.item()] += count.item()
 
         total_samples = len(self.files) * self.img_size ** 2
 
         return class_counts / total_samples
+
+    def calc_class_weights(self):
+        class_percentages = self.calc_class_percentages()
+        class_weights = np.divide(1, class_percentages, out=np.zeros_like(
+            class_percentages), where=class_percentages != 0)
+        class_weights[0] = 0
+
+        return torch.tensor(class_weights).float()
 
     def __getitem__(self, index):
         file_index = index // (self.n_tiles**2)
@@ -65,10 +86,13 @@ class DFC2022Dataset(DFC2022):
 
         data = super().__getitem__(file_index)
 
-        image = get_tile(data['image'][:3], x, y, self.tile_size)
-        mask = get_tile(data['mask'].unsqueeze(0), x, y, self.tile_size)
+        data['image'] = get_tile(data['image'], x, y, self.tile_size)
 
-        return dict(image=image, mask=mask)
+        if 'mask' in data:
+            data['mask'] = get_tile(data['mask'].unsqueeze(0), x, y, self.tile_size)
+            data['mask'] = data['mask'].squeeze(0)
+
+        return data
 
     def __len__(self):
         return len(self.files) * (self.n_tiles ** 2)
