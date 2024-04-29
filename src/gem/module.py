@@ -23,7 +23,6 @@ class EarthMapping(L.LightningModule):
     def training_step(self, batch, batch_idx):
         inputs = batch['image'][:, :3]
         masks = self.transform_mask(batch['mask'])
-
         outputs = self.model(inputs)
 
         loss_fn = CrossEntropyLoss(weight=self.class_weights)

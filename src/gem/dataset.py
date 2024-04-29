@@ -7,6 +7,7 @@ import concurrent.futures
 from collections.abc import Callable
 from torch import Tensor
 from torchgeo.datasets import DFC2022
+import matplotlib.colors as mcolors
 
 
 def is_power_of_two(n):
@@ -17,13 +18,28 @@ def get_tile(tensor, x, y, tile_size):
     return tensor[:, x:x + tile_size, y:y + tile_size]
 
 
+def plot_batch(batch, preds, dataset):
+    cmap = DFC2022Dataset.cmap
+    batch['image'] *= 255
+    batch['prediction'] = preds.argmax(dim=1)
+    batch['prediction'] = torch.tensor(cmap(batch['prediction']))
+    batch['mask'] = batch['mask']
+    batch['mask'] = torch.tensor(cmap(batch['mask']))
+    samples = [dict(zip(batch, t)) for t in zip(*batch.values())]
+
+    for sample in samples:
+        dataset.plot(sample)
+
+
 class DFC2022Dataset(DFC2022):
+    cmap = mcolors.ListedColormap(DFC2022.colormap)
+
     def __init__(self, root: str = "data",
                  split: str = "train",
                  transforms: Callable[[dict[str, Tensor]], dict[str, Tensor]] | None = None,
                  checksum: bool = False,
                  n_tiles=1,
-                 img_size=2000):
+                 img_size=2048):
 
         if transforms is None:
             transforms = self.resize_transform

@@ -3,7 +3,6 @@ import lightning as pl
 import torch
 import torchvision.transforms as T
 
-from einops import rearrange
 from torch.utils.data import DataLoader
 from torchgeo.datamodules.utils import dataset_split
 from gem.dataset import DFC2022Dataset
@@ -29,6 +28,8 @@ class DFC2022DataModule(pl.LightningDataModule):
         patch_size: int = 512,
         predict_on: str = "val",
         augmentations=DEFAULT_AUGS,
+        img_size=2048,
+        n_tiles=1,
         **kwargs,
     ):
         super().__init__()
@@ -40,13 +41,14 @@ class DFC2022DataModule(pl.LightningDataModule):
         self.patch_size = patch_size
         self.predict_on = predict_on
         self.augmentations = augmentations
+        self.img_size = img_size
         self.random_crop = K.AugmentationSequential(
             K.RandomCrop((self.patch_size, self.patch_size), p=1.0, keepdim=False),
             data_keys=["input", "mask"],
         )
 
         transforms = T.Compose([self.preprocess, self.crop])
-        self.dataset = DFC2022Dataset(self.root_dir, "train", transforms=transforms)
+        self.dataset = DFC2022Dataset(self.root_dir, "train", transforms=transforms, img_size=img_size, n_tiles=n_tiles)
 
     def preprocess(self, sample):
         sample["image"][:3] /= 255.0
@@ -55,8 +57,8 @@ class DFC2022DataModule(pl.LightningDataModule):
 
         if "mask" in sample:
             sample["mask"][sample["mask"] == 15] = 0
-            sample["mask"] = sample["mask"].unsqueeze(0)
-
+            sample["mask"] = sample["mask"].to(torch.long)
+        
         return sample
 
     def crop(self, sample):
@@ -66,7 +68,7 @@ class DFC2022DataModule(pl.LightningDataModule):
         )
         sample["mask"] = sample["mask"].to(torch.long)
         sample["image"] = sample['image'].squeeze(0)
-        sample["mask"] = sample['mask'].squeeze(0)
+        sample["mask"] = sample['mask'].squeeze()
         return sample
 
     def setup(self, stage=None):
@@ -76,7 +78,7 @@ class DFC2022DataModule(pl.LightningDataModule):
             self.dataset, val_pct=self.val_split_pct, test_pct=0.0
         )
         self.predict_dataset = DFC2022Dataset(
-            self.root_dir, self.predict_on, transforms=test_transforms
+            self.root_dir, self.predict_on, transforms=test_transforms, img_size=self.img_size
         )
 
     def train_dataloader(self):
@@ -112,5 +114,4 @@ class DFC2022DataModule(pl.LightningDataModule):
                 )
                 batch["mask"] = batch["mask"].to(torch.long)
 
-        batch["mask"] = rearrange(batch["mask"], "b () h w -> b h w")
         return batch
