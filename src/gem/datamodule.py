@@ -3,6 +3,7 @@ import lightning as pl
 import torch
 import torchvision.transforms as T
 
+from einops import rearrange
 from torch.utils.data import DataLoader
 from torchgeo.datamodules.utils import dataset_split
 from gem.dataset import DFC2022Dataset
@@ -113,5 +114,6 @@ class DFC2022DataModule(pl.LightningDataModule):
                     batch["image"], batch["mask"]
                 )
                 batch["mask"] = batch["mask"].to(torch.long)
+                batch["mask"] = rearrange(batch["mask"], "b () h w -> b h w")
 
         return batch
