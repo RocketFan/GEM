@@ -26,7 +26,7 @@ class DFC2022DataModule(pl.LightningDataModule):
         batch_size: int = 8,
         num_workers: int = 0,
         val_split_pct: float = 0.1,
-        patch_size: int = 512,
+        patch_size: int | None = None,
         predict_on: str = "val",
         augmentations=DEFAULT_AUGS,
         img_size=2048,
@@ -43,12 +43,18 @@ class DFC2022DataModule(pl.LightningDataModule):
         self.predict_on = predict_on
         self.augmentations = augmentations
         self.img_size = img_size
-        self.random_crop = K.AugmentationSequential(
-            K.RandomCrop((self.patch_size, self.patch_size), p=1.0, keepdim=False),
-            data_keys=["input", "mask"],
-        )
+        self.patch_size = patch_size
 
-        transforms = T.Compose([self.preprocess, self.crop])
+        if self.patch_size is not None:
+            self.random_crop = K.AugmentationSequential(
+                K.RandomCrop((self.patch_size, self.patch_size), p=1.0, keepdim=False),
+                data_keys=["input", "mask"],
+            )
+
+            transforms = T.Compose([self.preprocess, self.crop])
+        else:
+            transforms = T.Compose([self.preprocess])
+
         self.dataset = DFC2022Dataset(self.root_dir, "train", transforms=transforms, img_size=img_size, n_tiles=n_tiles)
 
     def preprocess(self, sample):
@@ -93,7 +99,7 @@ class DFC2022DataModule(pl.LightningDataModule):
     def val_dataloader(self):
         return DataLoader(
             self.val_dataset,
-            batch_size=1,
+            batch_size=self.batch_size,
             num_workers=self.num_workers,
             shuffle=False
         )

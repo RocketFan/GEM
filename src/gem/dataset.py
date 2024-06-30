@@ -18,7 +18,7 @@ def get_tile(tensor, x, y, tile_size):
     return tensor[:, x:x + tile_size, y:y + tile_size]
 
 
-def plot_batch(batch, preds, dataset):
+def plot_batch(batch, preds, dataset, max_num=8):
     cmap = DFC2022Dataset.cmap
     batch['image'] *= 255
     batch['prediction'] = preds.argmax(dim=1)
@@ -26,6 +26,9 @@ def plot_batch(batch, preds, dataset):
     batch['mask'] = batch['mask']
     batch['mask'] = torch.tensor(cmap(batch['mask']))
     samples = [dict(zip(batch, t)) for t in zip(*batch.values())]
+
+    if len(samples) > max_num:
+        samples = samples[:max_num]
 
     for sample in samples:
         dataset.plot(sample)
