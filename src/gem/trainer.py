@@ -16,7 +16,9 @@ class FocalDiceLoss(nn.Module):
         self.dice_loss = smp.losses.DiceLoss(mode=mode, ignore_index=ignore_index)
 
     def forward(self, preds, targets):
-        return self.focal_loss(preds, targets) + self.dice_loss(preds, targets)
+        focal_loss = self.focal_loss(preds, targets)
+        dice_loss = self.dice_loss(preds, targets)
+        return focal_loss + dice_loss
 
 
 class DFC2022SemanticSegmentationTask(SemanticSegmentationTask):
@@ -31,7 +33,7 @@ class DFC2022SemanticSegmentationTask(SemanticSegmentationTask):
             )
         elif self.hparams["loss"] == "focal":
             self.criterion = smp.losses.FocalLoss(
-                "multiclass", ignore_index=self.hparams["ignore_index"], normalized=True
+                "multiclass", ignore_index=self.hparams["ignore_index"]
             )
         elif self.hparams["loss"] == "focaldice":
             self.criterion = FocalDiceLoss(
